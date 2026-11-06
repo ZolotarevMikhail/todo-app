@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Задачник — все задачи в одном месте</title>
+<meta name="description" content="Список задач прямо в браузере: добавить, отметить, удалить — сохраняется автоматически.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23ffffff'/%3E%3Cpath d='M18 33l10 10 18-22' stroke='%232dd4b5' stroke-width='6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #ffffff;
+  --ink: #17181c;
+  --soft: #6d7280;
+  --line: #ececf1;
+  --card: rgba(255, 255, 255, .75);
+  --accent: #2dd4b5;
+  --accent-deep: #0a7d6b;
+  --accent-ink: #06251f;
+  --grad: linear-gradient(120deg, #2dd4b5, #59c2ff 55%, #8f8ff7);
+}
+
+* { box-sizing: border-box; }
+
+html { background: var(--bg); }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+.wrap { max-width: 760px; margin: 0 auto; padding: 24px 20px 80px; position: relative; }
+
+/* цветные пятна на фоне */
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: .35;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.blob--teal { width: 420px; height: 420px; background: #2dd4b5; top: -160px; left: -140px; }
+.blob--blue { width: 380px; height: 380px; background: #59c2ff; top: -80px; right: -160px; opacity: .25; }
+.blob--violet { width: 300px; height: 300px; background: #8f8ff7; top: 320px; left: 50%; margin-left: 40px; opacity: .18; }
+
+.content { position: relative; z-index: 1; }
+
+/* шапка */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 72px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.logo .dot {
+  width: 10px; height: 10px;
+  background: var(--grad);
+  border-radius: 3px;
+}
+
+/* hero */
+.hero { text-align: center; margin-bottom: 56px; }
+
+.hero h1 {
+  margin: 0 0 16px;
+  font-size: clamp(32px, 7vw, 52px);
+  letter-spacing: -.035em;
+  line-height: 1.08;
+  font-weight: 800;
+}
+
+.hero h1 span {
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero p {
+  margin: 0 auto 28px;
+  max-width: 460px;
+  color: var(--soft);
+  font-size: 17px;
+}
+
+.chip {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-deep);
+  background: rgba(45, 212, 181, .12);
+  border-radius: 999px;
+  padding: 5px 14px;
+  margin-bottom: 18px;
+}
+
+/* стеклянная карточка приложения */
+.app {
+  background: var(--card);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, .9);
+  outline: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 6px 22px 14px;
+  box-shadow: 0 20px 60px rgba(23, 24, 28, .10);
+}
+
+.statline {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 2px;
+  border-bottom: 1px solid var(--line);
+  font-family: "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  color: var(--soft);
+}
+
+.statline b { color: var(--ink); }
+
+.bar { flex: 1; height: 6px; background: #edf1f5; border-radius: 3px; overflow: hidden; }
+
+.bar i {
+  display: block; height: 100%; width: 0%;
+  background: var(--grad); border-radius: 3px; transition: width .4s ease;
+}
+
+/* форма */
+.add-row {
+  display: flex; gap: 10px;
+  padding: 16px 2px;
+  border-bottom: 1px solid var(--line);
+}
+
+.add-row input {
+  flex: 1; min-width: 0;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 15px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.add-row input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(45, 212, 181, .18);
+}
+
+.add-row input::placeholder { color: var(--soft); }
+
+.add-row button {
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 0 22px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .2s, transform .1s;
+}
+
+.add-row button:hover { opacity: .85; }
+.add-row button:active { transform: scale(.97); }
+
+/* фильтры */
+.filters {
+  display: flex; align-items: center; gap: 4px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.filters button {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--soft);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+}
+
+.filters button:hover { color: var(--ink); }
+
+.filters button.on { background: var(--ink); color: #fff; }
+
+.filters .clean { margin-left: auto; font-weight: 500; }
+.filters .clean:hover { color: #e85c3a; border-color: #e85c3a; }
+
+/* задачи */
+.tasks { list-style: none; margin: 0; padding: 6px 0; }
+
+.task {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 2px;
+  border-bottom: 1px dashed var(--line);
+  transition: opacity .25s, transform .25s;
+}
+
+.task:last-child { border-bottom: none; }
+.task.hide { opacity: 0; transform: translateX(14px); }
+
+.check {
+  flex: none;
+  width: 24px; height: 24px;
+  border: 2px solid #d5d8e0;
+  border-radius: 8px;
+  cursor: pointer;
+  display: grid; place-items: center;
+  color: transparent;
+  font-size: 13px;
+  font-weight: 800;
+  transition: all .2s;
+}
+
+.check:hover { border-color: var(--accent); }
+
+.check:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.task.done .check { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+.title { flex: 1; min-width: 0; font-size: 15px; word-wrap: break-word; transition: color .2s; }
+
+.task.done .title { color: var(--soft); }
+
+.done-flag {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-deep);
+  background: rgba(45, 212, 181, .14);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+.del {
+  flex: none;
+  width: 30px; height: 30px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #b7bcc6;
+  font-size: 15px;
+  cursor: pointer;
+  display: grid; place-items: center;
+  transition: all .2s;
+}
+
+.del:hover { color: #e85c3a; border-color: #f5c8bd; background: #fff2ef; }
+
+.empty { padding: 36px 2px 28px; text-align: center; color: var(--soft); font-size: 14px; }
+
+/* плитки-фичи */
+.features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.feature {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 20px 18px;
+  transition: transform .2s, box-shadow .2s;
+}
+
+.feature:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(23, 24, 28, .08); }
+
+.feature .ico {
+  width: 36px; height: 36px;
+  border-radius: 11px;
+  display: grid; place-items: center;
+  font-size: 17px;
+  margin-bottom: 12px;
+}
+
+.f-teal .ico { background: rgba(45, 212, 181, .14); }
+.f-blue .ico { background: rgba(89, 194, 255, .14); }
+.f-violet .ico { background: rgba(143, 143, 247, .14); }
+
+.feature h3 { margin: 0 0 5px; font-size: 14px; }
+
+.feature p { margin: 0; font-size: 13px; color: var(--soft); }
+
+.footer { margin-top: 48px; text-align: center; font-size: 12px; color: var(--soft); }
+
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+.shake { animation: shake .25s; }
+
+@media (max-width: 560px) {
+  .nav { margin-bottom: 44px; }
+  .features { grid-template-columns: 1fr; }
+  .add-row { flex-direction: column; }
+  .add-row button { padding: 12px 22px; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="blob blob--teal"></div>
+  <div class="blob blob--blue"></div>
+  <div class="blob blob--violet"></div>
+
+  <div class="content">
+
+    <div class="nav">
+      <div class="logo"><span class="dot"></span>Задачник</div>
+      <span class="chip">работает локально</span>
+    </div>
+
+    <section class="hero">
+      <h1>Все задачи<br><span>в одном месте</span></h1>
+      <p>Добавляйте, отмечайте, удаляйте. Список живёт в браузере и не пропадает после перезагрузки.</p>
+    </section>
+
+    <div class="app">
+
+      <div class="statline">
+        <span>всего <b data-count="all">0</b></span>
+        <span>готово <b data-count="done">0</b></span>
+        <div class="bar"><i id="progress"></i></div>
+        <span data-count="percent">0%</span>
+      </div>
+
+      <div class="add-row">
+        <input type="text" id="input" placeholder="Что нужно сделать?" maxlength="200" autocomplete="off">
+        <button id="addBtn">Добавить</button>
+      </div>
+
+      <div class="filters">
+        <button data-filter="all" class="on">Все</button>
+        <button data-filter="active">Активные</button>
+        <button data-filter="done">Выполненные</button>
+        <button class="clean" id="clearDone" title="Удалить все выполненные">Очистить выполненные</button>
+      </div>
+
+      <ul class="tasks" id="tasks"></ul>
+      <div class="empty" id="empty" hidden><span id="emptyText">Задач пока нет — добавьте первую</span></div>
+
+    </div>
+
+    <section class="features">
+      <div class="feature f-teal">
+        <span class="ico">⚡</span>
+        <h3>Мгновенно</h3>
+        <p>Без регистрации и установки. Открыл — работай.</p>
+      </div>
+      <div class="feature f-blue">
+        <span class="ico">💾</span>
+        <h3>Не забудет</h3>
+        <p>localStorage в вашем браузере: перезагрузка не страшна.</p>
+      </div>
+      <div class="feature f-violet">
+        <span class="ico">📊</span>
+        <h3>Видно прогресс</h3>
+        <p>Счётчики и полоса выполнения прямо над списком.</p>
+      </div>
+    </section>
+
+    <div class="footer">Задачник — демо AI-разработки (Claude Code)</div>
+
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var STORAGE_KEY = 'todo-variant2-v1';
+
+  var tasks = [];
+  var filter = 'all';
+
+  function load() {
+    var raw = null;
+    try { raw = localStorage.getItem(STORAGE_KEY); } catch (e) { /* нет доступа — не критично */ }
+    if (!raw) { tasks = seed(); save(); return; }
+    try {
+      // проверяем структуру данных, иначе битый localStorage валит весь скрипт
+      var parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.every(function (t) {
+        return t && typeof t.id === 'number' && typeof t.text === 'string';
+      })) { tasks = parsed; } else { tasks = seed(); save(); }
+    } catch (e) { tasks = seed(); save(); }
+  }
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); } catch (e) { /* тихо */ }
+  }
+
+  function seed() {
+    return [
+      { id: 1, text: 'Отметить эту задачу выполненной', done: false },
+      { id: 2, text: 'Добавить свою задачу', done: false },
+      { id: 3, text: 'Обновить страницу — список сохранится', done: true }
+    ];
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function render() {
+    var list = document.getElementById('tasks');
+    var empty = document.getElementById('empty');
+    var emptyText = document.getElementById('emptyText');
+    var visible = tasks.filter(matchesFilter);
+
+    var html = '';
+    for (var i = 0; i < visible.length; i++) {
+      var t = visible[i];
+      html += '<li class="task' + (t.done ? ' done' : '') + '" data-id="' + esc(t.id) + '">' +
+        '<span class="check" data-act="toggle" role="checkbox" tabindex="0" aria-checked="' + t.done + '" title="Выполнено">✓</span>' +
+        '<span class="title">' + esc(t.text) + '</span>' +
+        (t.done ? '<span class="done-flag">готово</span>' : '') +
+        '<button class="del" data-act="del" title="Удалить">✕</button>' +
+        '</li>';
+    }
+    list.innerHTML = html;
+
+    if (visible.length === 0) {
+      empty.hidden = false;
+      emptyText.textContent = tasks.length === 0 ? 'Задач пока нет — добавьте первую' : 'В этом фильтре задач нет';
+    } else {
+      empty.hidden = true;
+    }
+
+    var done = tasks.filter(function (t) { return t.done; }).length;
+    document.querySelector('[data-count="all"]').textContent = tasks.length;
+    document.querySelector('[data-count="done"]').textContent = done;
+    var pct = tasks.length ? Math.round(done * 100 / tasks.length) : 0;
+    document.getElementById('progress').style.width = pct + '%';
+    document.querySelector('[data-count="percent"]').textContent = pct + '%';
+  }
+
+  function matchesFilter(t) {
+    if (filter === 'active') return !t.done;
+    if (filter === 'done') return t.done;
+    return true;
+  }
+
+  function addTask() {
+    var input = document.getElementById('input');
+    var text = input.value.trim();
+    if (!text) {
+      input.classList.remove('shake');
+      void input.offsetWidth;
+      input.classList.add('shake');
+      return;
+    }
+    var maxId = 0;
+    for (var i = 0; i < tasks.length; i++) { if (tasks[i].id > maxId) { maxId = tasks[i].id; } }
+    tasks.unshift({ id: maxId + 1, text: text, done: false });
+    input.value = '';
+    save();
+    render();
+  }
+
+  function toggleDone(id) {
+    for (var i = 0; i < tasks.length; i++) {
+      if (tasks[i].id === id) { tasks[i].done = !tasks[i].done; break; }
+    }
+    save();
+    render();
+  }
+
+  function removeTask(id) {
+    var li = document.querySelector('.task[data-id="' + id + '"]');
+    if (li) {
+      li.classList.add('hide');
+      setTimeout(function () {
+        tasks = tasks.filter(function (t) { return t.id !== id; });
+        save();
+        render();
+      }, 250);
+    } else {
+      tasks = tasks.filter(function (t) { return t.id !== id; });
+      save();
+      render();
+    }
+  }
+
+  function clearDone() {
+    if (!tasks.some(function (t) { return t.done; })) { return; }
+    tasks = tasks.filter(function (t) { return !t.done; });
+    save();
+    render();
+  }
+
+  function wire() {
+    document.getElementById('addBtn').addEventListener('click', addTask);
+    document.getElementById('input').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { addTask(); }
+    });
+
+    // клавиатурная отметка: галочка в фокусе + Enter или пробел
+    document.getElementById('tasks').addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') { return; }
+      if (!e.target.classList.contains('check')) { return; }
+      e.preventDefault();
+      toggleDone(Number(e.target.closest('.task').getAttribute('data-id')));
+    });
+
+    document.getElementById('tasks').addEventListener('click', function (e) {
+      var li = e.target.closest('.task');
+      if (!li) { return; }
+      var id = Number(li.getAttribute('data-id'));
+      if (e.target.getAttribute('data-act') === 'toggle') { toggleDone(id); }
+      if (e.target.getAttribute('data-act') === 'del') { removeTask(id); }
+    });
+
+    document.querySelector('.filters').addEventListener('click', function (e) {
+      var act = e.target.closest('[data-filter]');
+      if (act) {
+        filter = act.getAttribute('data-filter');
+        document.querySelectorAll('.filters [data-filter]').forEach(function (b) {
+          b.classList.toggle('on', b === act);
+        });
+        render();
+        return;
+      }
+      if (e.target.closest('#clearDone')) { clearDone(); }
+    });
+  }
+
+  load();
+  wire();
+  render();
+})();
+</script>
+</body>
+</html>

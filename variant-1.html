@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Задачник — порядок в делах</title>
+<meta name="description" content="Простой список задач прямо в браузере: добавить, отметить, удалить. Сохраняется автоматически.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23161616'/%3E%3Cpath d='M18 33l10 10 18-22' stroke='%230a7d6b' stroke-width='6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f7f7f5;
+  --ink: #161616;
+  --soft: #6f6f6a;
+  --line: #e6e5e0;
+  --card: #ffffff;
+  --accent: #0a7d6b;
+  --accent-ink: #ffffff;
+  --done: #e7f3f0;
+}
+
+* { box-sizing: border-box; }
+
+html { background: var(--bg); }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.wrap { max-width: 720px; margin: 0 auto; padding: 24px 20px 80px; }
+
+/* шапка-лендинг */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 64px;
+}
+
+.logo {
+  font-weight: 700;
+  letter-spacing: -.01em;
+  font-size: 15px;
+}
+
+.logo small { font-weight: 500; color: var(--soft); }
+
+.hero { text-align: center; margin-bottom: 48px; }
+
+.badge {
+  display: inline-block;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 4px 12px;
+  margin-bottom: 20px;
+}
+
+.hero h1 {
+  margin: 0 0 14px;
+  font-size: clamp(30px, 6vw, 44px);
+  letter-spacing: -.03em;
+  line-height: 1.12;
+}
+
+.hero p {
+  margin: 0 auto 24px;
+  max-width: 420px;
+  color: var(--soft);
+  font-size: 16px;
+}
+
+.cta {
+  display: inline-block;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .2s;
+}
+
+.cta:hover { opacity: .85; }
+
+/* карточка-приложение */
+.app {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 6px 20px 12px;
+  box-shadow: 0 1px 2px rgba(20, 25, 35, .04), 0 10px 30px rgba(20, 25, 35, .05);
+}
+
+.statline {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 2px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--soft);
+}
+
+.statline b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.bar { flex: 1; height: 4px; background: var(--done); border-radius: 2px; overflow: hidden; }
+
+.bar i {
+  display: block; height: 100%; width: 0%;
+  background: var(--accent); border-radius: 2px; transition: width .4s ease;
+}
+
+/* форма */
+.add-row { display: flex; gap: 10px; padding: 16px 2px; border-bottom: 1px solid var(--line); }
+
+.add-row input {
+  flex: 1; min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 11px 18px;
+  font-size: 15px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color .2s;
+}
+
+.add-row input:focus { border-color: var(--accent); }
+.add-row input::placeholder { color: var(--soft); }
+
+.add-row button {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: none;
+  border-radius: 999px;
+  padding: 0 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .2s, transform .1s;
+}
+
+.add-row button:hover { opacity: .9; }
+.add-row button:active { transform: scale(.97); }
+
+/* фильтры */
+.filters {
+  display: flex; align-items: center; gap: 4px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.filters button {
+  background: transparent;
+  border: none;
+  color: var(--soft);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color .2s, background .2s;
+}
+
+.filters button:hover { color: var(--ink); }
+
+.filters button.on { background: var(--done); color: var(--accent); }
+
+.filters .clean { margin-left: auto; font-weight: 500; }
+.filters .clean:hover { color: #c0392b; }
+
+/* задачи: строки без коробок, спокойные */
+.tasks { list-style: none; margin: 0; padding: 4px 0; }
+
+.task {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 2px;
+  transition: opacity .25s, transform .25s;
+  border-bottom: 1px solid var(--line);
+}
+
+.task:last-child { border-bottom: none; }
+.task.hide { opacity: 0; transform: translateX(14px); }
+
+.check {
+  flex: none;
+  width: 22px; height: 22px;
+  border: 2px solid #c9c8c2;
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid; place-items: center;
+  color: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  transition: all .2s;
+}
+
+.check:hover { border-color: var(--accent); }
+
+.check:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.task.done .check { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+.title { flex: 1; min-width: 0; font-size: 15px; word-wrap: break-word; transition: color .2s; }
+
+.task.done .title { color: var(--soft); }
+
+.done-flag {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--done);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+.del {
+  flex: none;
+  width: 30px; height: 30px;
+  border: none; border-radius: 50%;
+  background: transparent;
+  color: #c9c8c2;
+  font-size: 15px;
+  cursor: pointer;
+  display: grid; place-items: center;
+  transition: all .2s;
+}
+
+.del:hover { color: #c0392b; background: var(--done); }
+
+.empty { padding: 36px 2px 28px; text-align: center; color: var(--soft); font-size: 14px; }
+
+/* плитки-фичи под лендинг */
+.features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.feature {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.feature .ico { font-size: 20px; display: block; margin-bottom: 10px; }
+
+.feature h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  letter-spacing: -.01em;
+}
+
+.feature p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--soft);
+}
+
+.footer {
+  margin-top: 48px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--soft);
+}
+
+/* тряска пустого ввода */
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+.shake { animation: shake .25s; }
+
+@media (max-width: 560px) {
+  .nav { margin-bottom: 40px; }
+  .features { grid-template-columns: 1fr; }
+  .add-row { flex-direction: column; }
+  .add-row button { padding: 11px 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="nav">
+    <div class="logo">Задачник <small>· список дел</small></div>
+    <button class="cta" onclick="document.getElementById('input').focus()">Попробовать</button>
+  </div>
+
+  <section class="hero">
+    <span class="badge">просто · быстро · локально</span>
+    <h1>Порядок в делах.<br>Без лишнего.</h1>
+    <p>Список задач прямо в браузере. Добавляйте, отмечайте выполненное — список сохраняется сам.</p>
+  </section>
+
+  <div class="app">
+
+    <div class="statline">
+      <span>всего <b data-count="all">0</b></span>
+      <span>готово <b data-count="done">0</b></span>
+      <div class="bar"><i id="progress"></i></div>
+      <span data-count="percent">0%</span>
+    </div>
+
+    <div class="add-row">
+      <input type="text" id="input" placeholder="Новая задача…" maxlength="200" autocomplete="off">
+      <button id="addBtn">Добавить</button>
+    </div>
+
+    <div class="filters">
+      <button data-filter="all" class="on">Все</button>
+      <button data-filter="active">Активные</button>
+      <button data-filter="done">Выполненные</button>
+      <button class="clean" id="clearDone" title="Удалить все выполненные">Очистить выполненные</button>
+    </div>
+
+    <ul class="tasks" id="tasks"></ul>
+    <div class="empty" id="empty" hidden><span id="emptyText">Задач пока нет — добавьте первую</span></div>
+
+  </div>
+
+  <section class="features">
+    <div class="feature">
+      <span class="ico">✅</span>
+      <h3>Всё сохраняется</h3>
+      <p>Данные живут в вашем браузере: закрыли страницу, вернулись — всё на месте.</p>
+    </div>
+    <div class="feature">
+      <span class="ico">🎯</span>
+      <h3>Фильтры и прогресс</h3>
+      <p>Активные и выполненные отдельно, полоса показывает, сколько сделано.</p>
+    </div>
+    <div class="feature">
+      <span class="ico">🔒</span>
+      <h3>Без регистрации</h3>
+      <p>Ничего не отправляется в интернет — задачи не покидают ваш компьютер.</p>
+    </div>
+  </section>
+
+  <div class="footer">Задачник — демо AI-разработки (Claude Code)</div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var STORAGE_KEY = 'todo-variant1-v1';
+
+  var tasks = [];
+  var filter = 'all';
+
+  function load() {
+    var raw = null;
+    try { raw = localStorage.getItem(STORAGE_KEY); } catch (e) { /* нет доступа — не критично */ }
+    if (!raw) { tasks = seed(); save(); return; }
+    try {
+      // проверяем структуру данных, иначе битый localStorage валит весь скрипт
+      var parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.every(function (t) {
+        return t && typeof t.id === 'number' && typeof t.text === 'string';
+      })) { tasks = parsed; } else { tasks = seed(); save(); }
+    } catch (e) { tasks = seed(); save(); }
+  }
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); } catch (e) { /* тихо */ }
+  }
+
+  function seed() {
+    return [
+      { id: 1, text: 'Отметить эту задачу выполненной', done: false },
+      { id: 2, text: 'Добавить свою задачу', done: false },
+      { id: 3, text: 'Обновить страницу — список сохранится', done: true }
+    ];
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function render() {
+    var list = document.getElementById('tasks');
+    var empty = document.getElementById('empty');
+    var emptyText = document.getElementById('emptyText');
+    var visible = tasks.filter(matchesFilter);
+
+    var html = '';
+    for (var i = 0; i < visible.length; i++) {
+      var t = visible[i];
+      html += '<li class="task' + (t.done ? ' done' : '') + '" data-id="' + esc(t.id) + '">' +
+        '<span class="check" data-act="toggle" role="checkbox" tabindex="0" aria-checked="' + t.done + '" title="Выполнено">✓</span>' +
+        '<span class="title">' + esc(t.text) + '</span>' +
+        (t.done ? '<span class="done-flag">готово</span>' : '') +
+        '<button class="del" data-act="del" title="Удалить">✕</button>' +
+        '</li>';
+    }
+    list.innerHTML = html;
+
+    if (visible.length === 0) {
+      empty.hidden = false;
+      emptyText.textContent = tasks.length === 0 ? 'Задач пока нет — добавьте первую' : 'В этом фильтре задач нет';
+    } else {
+      empty.hidden = true;
+    }
+
+    var done = tasks.filter(function (t) { return t.done; }).length;
+    document.querySelector('[data-count="all"]').textContent = tasks.length;
+    document.querySelector('[data-count="done"]').textContent = done;
+    var pct = tasks.length ? Math.round(done * 100 / tasks.length) : 0;
+    document.getElementById('progress').style.width = pct + '%';
+    document.querySelector('[data-count="percent"]').textContent = pct + '%';
+  }
+
+  function matchesFilter(t) {
+    if (filter === 'active') return !t.done;
+    if (filter === 'done') return t.done;
+    return true;
+  }
+
+  function addTask() {
+    var input = document.getElementById('input');
+    var text = input.value.trim();
+    if (!text) {
+      input.classList.remove('shake');
+      void input.offsetWidth;
+      input.classList.add('shake');
+      return;
+    }
+    var maxId = 0;
+    for (var i = 0; i < tasks.length; i++) { if (tasks[i].id > maxId) { maxId = tasks[i].id; } }
+    tasks.unshift({ id: maxId + 1, text: text, done: false });
+    input.value = '';
+    save();
+    render();
+  }
+
+  function toggleDone(id) {
+    for (var i = 0; i < tasks.length; i++) {
+      if (tasks[i].id === id) { tasks[i].done = !tasks[i].done; break; }
+    }
+    save();
+    render();
+  }
+
+  function removeTask(id) {
+    var li = document.querySelector('.task[data-id="' + id + '"]');
+    if (li) {
+      li.classList.add('hide');
+      setTimeout(function () {
+        tasks = tasks.filter(function (t) { return t.id !== id; });
+        save();
+        render();
+      }, 250);
+    } else {
+      tasks = tasks.filter(function (t) { return t.id !== id; });
+      save();
+      render();
+    }
+  }
+
+  function clearDone() {
+    if (!tasks.some(function (t) { return t.done; })) { return; }
+    tasks = tasks.filter(function (t) { return !t.done; });
+    save();
+    render();
+  }
+
+  function wire() {
+    document.getElementById('addBtn').addEventListener('click', addTask);
+    document.getElementById('input').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { addTask(); }
+    });
+
+    // клавиатурная отметка: галочка в фокусе + Enter или пробел
+    document.getElementById('tasks').addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') { return; }
+      if (!e.target.classList.contains('check')) { return; }
+      e.preventDefault();
+      toggleDone(Number(e.target.closest('.task').getAttribute('data-id')));
+    });
+
+    document.getElementById('tasks').addEventListener('click', function (e) {
+      var li = e.target.closest('.task');
+      if (!li) { return; }
+      var id = Number(li.getAttribute('data-id'));
+      if (e.target.getAttribute('data-act') === 'toggle') { toggleDone(id); }
+      if (e.target.getAttribute('data-act') === 'del') { removeTask(id); }
+    });
+
+    document.querySelector('.filters').addEventListener('click', function (e) {
+      var act = e.target.closest('[data-filter]');
+      if (act) {
+        filter = act.getAttribute('data-filter');
+        document.querySelectorAll('.filters [data-filter]').forEach(function (b) {
+          b.classList.toggle('on', b === act);
+        });
+        render();
+        return;
+      }
+      if (e.target.closest('#clearDone')) { clearDone(); }
+    });
+  }
+
+  load();
+  wire();
+  render();
+})();
+</script>
+</body>
+</html>
